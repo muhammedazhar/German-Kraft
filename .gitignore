@@ -1,0 +1,4 @@
+# Git Ignore file
+
+# Ignore datafiles
+*.csv

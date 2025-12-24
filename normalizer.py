@@ -1,5 +1,5 @@
 """
-Sales Data Categorizer and Processor
+Sales Data Normalizer for German Kraft Brewing Limited.
 Standardizes categories, extracts modifiers, merges duplicates, and organizes sales data.
 """
 
@@ -68,10 +68,39 @@ WINE_SIZE_PATTERNS = {
 # sort_type can be 'alpha' (alphabetical), 'numeric', or 'custom'
 SORT_COLUMNS = [
     ('Category', 'alpha'),
-    ('Modifiers', 'alpha'),
-    ('Product', 'alpha'),
-    ('Mixer', 'custom'),  # Changed to custom for special Mixer sorting
+    ('Modifiers', 'custom'),   # Changed to custom for special Modifier sorting
+    ('Product', 'custom'),    # Changed to custom for special Product sorting
+    ('Mixer', 'custom'),      # Custom for special Mixer sorting
     ('Qty', 'numeric'),
+]
+
+# Custom sorting order for Modifier column
+# Lower priority number = appears first in sorted output
+MODIFIER_SORT_ORDER = [
+    'Pint',
+    'Half',
+    'Mass',
+    'Shandy',
+    'Shandy Half',
+    'Top',
+    'Top Half',
+    'Single',
+    'Double',
+    'Bottle',
+    '250ml',
+    '175ml',
+    '125ml',
+]
+
+# Custom sorting order for Product column
+# Lower priority number = appears first in sorted output
+PRODUCT_SORT_ORDER = [
+    'Heinr Zwickel',
+    'Heidi Helles',
+    'Siggi',
+    'Lotte Weissb',
+    'Fritz',
+    'Schwarzbier',
 ]
 
 # Custom sorting order for Mixer column
@@ -160,6 +189,20 @@ NUMERIC_FIELDS = ['Qty', 'Item Value', 'Modifier Value',
 OUTPUT_COLUMNS = ['Category', 'Modifiers', 'Product', 'Mixer', 'Qty',
                   'Item Value', 'Modifier Value', 'Gross Product Sales',
                   'Cost Price', 'Gross Profit']
+
+# Constants for sorting
+SORT_EMPTY_VALUE = 'zzzzz'
+SORT_EMPTY_PRIORITY = 999
+SORT_TYPE_ALPHA = 'alpha'
+SORT_TYPE_NUMERIC = 'numeric'
+SORT_TYPE_CUSTOM = 'custom'
+
+# Column name mapping for custom sort
+CUSTOM_SORT_MAPPING = {
+    'Mixer': MIXER_SORT_ORDER,
+    'Modifiers': MODIFIER_SORT_ORDER,
+    'Product': PRODUCT_SORT_ORDER,
+}
 
 
 def clean_numeric_value(value):
@@ -347,46 +390,43 @@ def merge_duplicate_entries(data_rows):
     Returns:
         tuple: (merged_rows, duplicates_merged_count)
     """
-    grouped = defaultdict(lambda: {field: 0.0 for field in NUMERIC_FIELDS})
-    grouped_metadata = {}
-
-    for row in data_rows:
-        key = (
+    def create_key(row):
+        """Create a tuple key from row identifiers."""
+        return (
             row.get('Category', ''),
             row.get('Modifiers', ''),
             row.get('Product', ''),
             row.get('Mixer', '')
         )
 
+    # Group data by key and track counts
+    grouped = defaultdict(
+        lambda: {'numeric': {field: 0.0 for field in NUMERIC_FIELDS}, 'count': 0})
+
+    for row in data_rows:
+        key = create_key(row)
+        grouped[key]['count'] += 1
+
         # Aggregate numeric values
         for field in NUMERIC_FIELDS:
             value = row.get(field, '0')
-            grouped[key][field] += clean_numeric_value(value)
+            grouped[key]['numeric'][field] += clean_numeric_value(value)
 
-        # Store metadata (only once per key)
-        if key not in grouped_metadata:
-            grouped_metadata[key] = {
-                'Category': row.get('Category', ''),
-                'Modifiers': row.get('Modifiers', ''),
-                'Product': row.get('Product', ''),
-                'Mixer': row.get('Mixer', ''),
-                'count': 0
-            }
-        grouped_metadata[key]['count'] += 1
+    # Calculate duplicates merged
+    duplicates_merged = sum(
+        data['count'] - 1 for data in grouped.values() if data['count'] > 1)
 
     # Convert back to list of rows
     merged_rows = []
-    duplicates_merged = sum(
-        meta['count'] - 1 for meta in grouped_metadata.values() if meta['count'] > 1)
-
-    for key, aggregated in grouped.items():
-        metadata = grouped_metadata[key]
+    for key, data in grouped.items():
+        category, modifiers, product, mixer = key
+        aggregated = data['numeric']
 
         merged_row = {
-            'Category': metadata['Category'],
-            'Modifiers': metadata['Modifiers'],
-            'Product': metadata['Product'],
-            'Mixer': metadata['Mixer'],
+            'Category': category,
+            'Modifiers': modifiers,
+            'Product': product,
+            'Mixer': mixer,
             'Qty': format_numeric_value(aggregated['Qty'], as_integer=True),
             'Item Value': format_numeric_value(aggregated['Item Value']),
             'Modifier Value': format_numeric_value(aggregated['Modifier Value']),
@@ -400,30 +440,46 @@ def merge_duplicate_entries(data_rows):
     return merged_rows, duplicates_merged
 
 
-def get_mixer_sort_key(mixer_value):
+def get_custom_sort_key(value, sort_order_list):
     """
-    Generate a sort key for mixer values based on custom priority order.
+    Generate a sort key for values based on custom priority order.
 
     Args:
-        mixer_value (str): Mixer value to sort
+        value (str): Value to sort
+        sort_order_list (list): Priority order list
 
     Returns:
         tuple: (priority, alphabetic_value) for sorting
     """
-    if not mixer_value or mixer_value.strip() == '':
-        # Empty mixers go last
-        return (999, 'zzzzz')
+    if not value or not str(value).strip():
+        return (SORT_EMPTY_PRIORITY, SORT_EMPTY_VALUE)
 
-    mixer_str = str(mixer_value).strip()
+    value_str = str(value).strip()
+    value_lower = value_str.lower()
 
     # Check each priority pattern
-    for priority, pattern in enumerate(MIXER_SORT_ORDER):
-        if mixer_str == pattern or mixer_str.startswith(pattern):
-            # Return priority number and the mixer value for alphabetic sub-sorting
-            return (priority, mixer_str.lower())
+    for priority, pattern in enumerate(sort_order_list):
+        if value_str == pattern or value_str.startswith(pattern):
+            return (priority, value_lower)
 
-    # If no pattern matches, put it after all defined patterns
-    return (len(MIXER_SORT_ORDER), mixer_str.lower())
+    # No pattern matches - put after all defined patterns
+    return (len(sort_order_list), value_lower)
+
+
+def get_sort_key_for_column(value, column_name):
+    """
+    Generate appropriate sort key based on column name and sort order.
+
+    Args:
+        value (str): Value to sort
+        column_name (str): Name of the column
+
+    Returns:
+        tuple: (priority, alphabetic_value) for custom sort, or normalized value
+    """
+    if column_name in CUSTOM_SORT_MAPPING:
+        return get_custom_sort_key(value, CUSTOM_SORT_MAPPING[column_name])
+    return str(value).lower() if value else SORT_EMPTY_VALUE
 
 
 def sort_data(data_rows):
@@ -437,22 +493,17 @@ def sort_data(data_rows):
         list: Sorted list of rows
     """
     def sort_key(row):
-        """Generate sort key for a row based on SORT_COLUMNS configuration"""
+        """Generate sort key for a row based on SORT_COLUMNS configuration."""
         key = []
         for col_name, sort_type in SORT_COLUMNS:
             value = row.get(col_name, '')
 
-            if sort_type == 'numeric':
+            if sort_type == SORT_TYPE_NUMERIC:
                 key.append(clean_numeric_value(value))
-            elif sort_type == 'custom':
-                # Handle custom sorting (currently only for Mixer column)
-                if col_name == 'Mixer':
-                    key.append(get_mixer_sort_key(value))
-                else:
-                    # Fallback to alphabetic if custom but not recognized
-                    key.append(str(value).lower() if value else 'zzzzz')
-            else:  # 'alpha'
-                key.append(str(value).lower() if value else 'zzzzz')
+            elif sort_type == SORT_TYPE_CUSTOM:
+                key.append(get_sort_key_for_column(value, col_name))
+            else:  # SORT_TYPE_ALPHA
+                key.append(str(value).lower() if value else SORT_EMPTY_VALUE)
 
         return tuple(key)
 
@@ -469,12 +520,22 @@ def process_csv(input_file, output_file=None):
 
     Returns:
         Path: Output file path
+
+    Raises:
+        FileNotFoundError: If input file doesn't exist
+        PermissionError: If unable to write to output file
     """
     input_path = Path(input_file)
 
+    if not input_path.exists():
+        raise FileNotFoundError(f"Input file not found: {input_path}")
+
+    if not input_path.is_file():
+        raise ValueError(f"Input path is not a file: {input_path}")
+
     if output_file is None:
         output_file = input_path.parent / \
-            f"{input_path.stem}_cleaned{input_path.suffix}"
+            f"{input_path.stem} Cleaned{input_path.suffix}"
 
     output_path = Path(output_file)
 
@@ -576,6 +637,43 @@ def process_csv(input_file, output_file=None):
     return output_path
 
 
+def print_normalization_summary():
+    """Print normalization rules summary."""
+    normalizations_applied = len(
+        MIXER_NORMALIZATION) + len(MODIFIER_NORMALIZATION) + len(PRODUCT_NORMALIZATION)
+    if normalizations_applied > 0:
+        print(f"\n✓ Value normalizations configured:")
+        if MIXER_NORMALIZATION:
+            print(f"  - Mixer corrections: {len(MIXER_NORMALIZATION)} rules")
+            for old_val, new_val in list(MIXER_NORMALIZATION.items())[:3]:
+                print(f"    '{old_val}' → '{new_val}'")
+            if len(MIXER_NORMALIZATION) > 3:
+                print(f"    ... and {len(MIXER_NORMALIZATION) - 3} more")
+        if MODIFIER_NORMALIZATION:
+            print(
+                f"  - Modifier corrections: {len(MODIFIER_NORMALIZATION)} rules")
+        if PRODUCT_NORMALIZATION:
+            print(
+                f"  - Product corrections: {len(PRODUCT_NORMALIZATION)} rules")
+
+
+def print_sort_configuration():
+    """Print sorting configuration."""
+    print(f"\n✓ Data sorted by:")
+    for col_name, sort_type in SORT_COLUMNS:
+        if sort_type == SORT_TYPE_ALPHA:
+            sort_desc = "alphabetically"
+        elif sort_type == SORT_TYPE_NUMERIC:
+            sort_desc = "numerically (ascending)"
+        elif sort_type == SORT_TYPE_CUSTOM:
+            sort_desc = "custom order"
+            if col_name == 'Mixer' and MIXER_SORT_ORDER:
+                sort_desc += f" (priority: {' > '.join(MIXER_SORT_ORDER[:3])}...)"
+        else:
+            sort_desc = sort_type
+        print(f"  - {col_name} ({sort_desc})")
+
+
 def print_summary(stats, duplicates_merged, final_row_count, output_path):
     """
     Print processing summary.
@@ -599,7 +697,7 @@ def print_summary(stats, duplicates_merged, final_row_count, output_path):
     if stats['products_swapped'] > 0:
         print(
             f"\n✓ Product/Modifier swapped: {stats['products_swapped']} entries")
-        print(f"  - Products: {', '.join(PRODUCTS_TO_SWAP)}")
+        print(f"  - Products: {', '.join(sorted(PRODUCTS_TO_SWAP))}")
         print(f"  - These were actually modifiers, now corrected")
 
     if stats['products_corrected'] > 0:
@@ -616,23 +714,7 @@ def print_summary(stats, duplicates_merged, final_row_count, output_path):
         print(f"\n✓ Mixers extracted: {stats['mixers_extracted']} products")
         print(f"  - Mixer information separated into 'Mixer' column")
 
-    # Show normalization stats
-    normalizations_applied = len(
-        MIXER_NORMALIZATION) + len(MODIFIER_NORMALIZATION) + len(PRODUCT_NORMALIZATION)
-    if normalizations_applied > 0:
-        print(f"\n✓ Value normalizations configured:")
-        if MIXER_NORMALIZATION:
-            print(f"  - Mixer corrections: {len(MIXER_NORMALIZATION)} rules")
-            for old_val, new_val in list(MIXER_NORMALIZATION.items())[:3]:
-                print(f"    '{old_val}' → '{new_val}'")
-            if len(MIXER_NORMALIZATION) > 3:
-                print(f"    ... and {len(MIXER_NORMALIZATION) - 3} more")
-        if MODIFIER_NORMALIZATION:
-            print(
-                f"  - Modifier corrections: {len(MODIFIER_NORMALIZATION)} rules")
-        if PRODUCT_NORMALIZATION:
-            print(
-                f"  - Product corrections: {len(PRODUCT_NORMALIZATION)} rules")
+    print_normalization_summary()
 
     if duplicates_merged > 0:
         print(f"\n✓ Duplicate entries merged: {duplicates_merged} duplicates")
@@ -640,28 +722,15 @@ def print_summary(stats, duplicates_merged, final_row_count, output_path):
         print(f"  - Numeric values aggregated")
 
     print(f"\n✓ Columns reordered: {', '.join(OUTPUT_COLUMNS)}")
-
-    print(f"\n✓ Data sorted by:")
-    for col_name, sort_type in SORT_COLUMNS:
-        if sort_type == 'alpha':
-            sort_desc = "alphabetically"
-        elif sort_type == 'numeric':
-            sort_desc = "numerically (ascending)"
-        elif sort_type == 'custom':
-            sort_desc = "custom order"
-            if col_name == 'Mixer':
-                sort_desc += f" (priority: {' > '.join(MIXER_SORT_ORDER[:3])}...)"
-        else:
-            sort_desc = sort_type
-        print(f"  - {col_name} ({sort_desc})")
+    print_sort_configuration()
 
 
 def main():
-    """Main execution function"""
+    """Main execution function."""
     input_file = "Datasets/Sales by Product and Modifier.csv"
 
     print("=" * 60)
-    print("Sales Data Categorizer and Processor")
+    print("Sales Data Normalizer for German Kraft Brewing Limited")
     print("=" * 60)
     print(f"\nInput file: {input_file}")
 
@@ -674,14 +743,23 @@ def main():
                 unique_mappings[new_cat] = []
             unique_mappings[new_cat].append(old_cat)
 
-    for new_cat, old_cats in unique_mappings.items():
-        print(f"  → {new_cat}: {', '.join(old_cats)}")
+    for new_cat, old_cats in sorted(unique_mappings.items()):
+        print(f"  → {new_cat}: {', '.join(sorted(old_cats))}")
 
     print("\nProcessing...\n")
 
-    process_csv(input_file)
-
-    print("\n" + "=" * 60)
+    try:
+        process_csv(input_file)
+        print("\n" + "=" * 60)
+    except FileNotFoundError as e:
+        print(f"\n❌ Error: {e}")
+        print("   Please ensure the input file exists.")
+    except PermissionError as e:
+        print(f"\n❌ Error: {e}")
+        print("   Please check file permissions.")
+    except Exception as e:
+        print(f"\n❌ Unexpected error: {e}")
+        raise
 
 
 if __name__ == "__main__":

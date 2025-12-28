@@ -1,4 +1,7 @@
 # Git Ignore file
 
+# Ignore MacOS system files
+.DS_Store
+
 # Ignore datafiles
 *.csv

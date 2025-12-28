@@ -667,7 +667,11 @@ def print_sort_configuration():
             sort_desc = "numerically (ascending)"
         elif sort_type == SORT_TYPE_CUSTOM:
             sort_desc = "custom order"
-            if col_name == 'Mixer' and MIXER_SORT_ORDER:
+            if col_name == 'Modifiers' and MODIFIER_SORT_ORDER:
+                sort_desc += f" (priority: {' > '.join(MODIFIER_SORT_ORDER[:3])}...)"
+            elif col_name == 'Product' and PRODUCT_SORT_ORDER:
+                sort_desc += f" (priority: {' > '.join(PRODUCT_SORT_ORDER[:3])}...)"
+            elif col_name == 'Mixer' and MIXER_SORT_ORDER:
                 sort_desc += f" (priority: {' > '.join(MIXER_SORT_ORDER[:3])}...)"
         else:
             sort_desc = sort_type
@@ -686,6 +690,7 @@ def print_summary(stats, duplicates_merged, final_row_count, output_path):
     """
     print(f"✓ Processing complete!")
     print(f"  - Rows processed: {stats['rows_processed']}")
+    print(f"  - Duplicates merged: {duplicates_merged}")
     print(f"  - Final rows after merging: {final_row_count}")
     print(f"  - Output file: {output_path}")
 

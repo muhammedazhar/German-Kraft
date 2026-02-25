@@ -387,6 +387,7 @@ def normalize_redeemables(
 
     rows: list[dict] = []
     skipped_voucher = 0
+    skipped_prepaid = 0
     skipped_other = 0
 
     with open(path, encoding="utf-8") as fh:
@@ -397,6 +398,11 @@ def normalize_redeemables(
             # Skip Voucher Codes per spec
             if rtype.lower() == "voucher code":
                 skipped_voucher += 1
+                continue
+
+            # Skip Prepaid Cards (not relevant to sales splitting)
+            if rtype.lower() == "Prepaid Tab":
+                skipped_prepaid += 1
                 continue
 
             # Warn on unknown types but still process them

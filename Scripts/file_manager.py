@@ -11,7 +11,7 @@ A.  Menu selection & deduplication
 
 B.  Dataset fingerprinting (duplicate-run prevention)
     • SHA-256 hash the two Datasets/ CSVs.
-    • Compare against a persistent log (.processed_fingerprints.json).
+    • Compare against a persistent log (.fingerprints.json).
     • Halt (raise RuntimeError) when a previously processed pair is detected.
 
 C.  Post-run cleanup
@@ -35,7 +35,7 @@ from .logger import PipelineLogger
 # Paths are relative to the project root (where main.py lives)
 MENUS_DIR = Path("Menus")
 DATASETS_DIR = Path("Datasets")
-FINGERPRINT_LOG = Path(".processed_fingerprints.json")
+FINGERPRINT_LOG = Path(".fingerprints.json")
 
 DATASET_FILES = [
     "Sales by Product and Modifier.csv",

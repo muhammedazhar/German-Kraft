@@ -57,7 +57,7 @@ MASTER_SALES_PATH = DATASETS_DIR / "Sales by Product and Modifier.csv"
 REDEEMABLES_PATH = DATASETS_DIR / "Redeemables by Item.csv"
 DISCOUNTS_PATH = DISCOUNTS_DIR / "Discounts.csv"
 GOLD_CARDS_PATH = DISCOUNTS_DIR / "Gold-Cards.csv"
-FINGERPRINT_LOG_PATH = BASE_DIR / ".processed_fingerprints.json"
+FINGERPRINT_LOG_PATH = BASE_DIR / ".fingerprints.json"
 
 OUTPUT_FILES = {
     "normal": OUTPUTS_DIR / "Normal-Sales.csv",

@@ -1,12 +1,50 @@
 """
 Sales Data Normalizer for German Kraft Brewing Limited.
 Standardizes categories, extracts modifiers, merges duplicates, and organizes sales data.
+
+NOTE – Modular refactor
+-----------------------
+The core logic now lives in Scripts/normalizer.py as part of the Dines → Polaris
+splitting pipeline.  This file is kept as a backward-compatible standalone entry
+point; it delegates entirely to the Scripts module.
+
+To run the full pipeline (all four output files) use:
+    python main.py
+
+To run only the standalone normalizer (legacy behaviour):
+    python normalizer.py
 """
 
-import csv
-import re
-from pathlib import Path
 from collections import defaultdict
+import re
+import csv
+import sys
+from pathlib import Path
+
+# Ensure project root is on sys.path
+sys.path.insert(0, str(Path(__file__).parent))
+
+from .Scripts.normalizer import (  # noqa: F401  (re-export for any external imports)
+    CATEGORY_MAPPING,
+    WINE_SIZE_PATTERNS,
+    SORT_COLUMNS,
+    MODIFIER_SORT_ORDER,
+    PRODUCT_SORT_ORDER,
+    MIXER_SORT_ORDER,
+    MIXER_NORMALIZATION,
+    MODIFIER_NORMALIZATION,
+    PRODUCT_NORMALIZATION,
+    PRODUCT_CATEGORY_CORRECTIONS,
+    PRODUCTS_TO_SWAP,
+    NUMERIC_FIELDS,
+    OUTPUT_COLUMNS,
+    clean_numeric_value,
+    format_numeric_value,
+    normalize_sales as process_csv_fn,
+    process_csv,
+    main,
+)
+
 
 # Category Standardization Dictionary
 # Add or modify mappings here to update category standardization rules

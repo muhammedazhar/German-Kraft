@@ -3,7 +3,7 @@ logger.py – Captures and persists pipeline warnings and informational messages
 
 Warnings are:
   • Printed to the console immediately (with severity prefix).
-  • Appended to Outputs/pipeline.log for post-run review.
+  • Appended to Docs/Logs/pipeline.log for post-run review.
 
 Usage
 -----
@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Literal
 
 # Default log file location (relative to project root, resolved at runtime)
-DEFAULT_LOG_PATH = Path("Outputs") / "pipeline.log"
+DEFAULT_LOG_PATH = Path("Docs") / "Logs" / "pipeline.log"
 
 Severity = Literal["INFO", "WARNING", "ERROR"]
 

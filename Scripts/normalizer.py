@@ -234,6 +234,32 @@ def _sort_key(row: dict) -> tuple:
     return tuple(parts)
 
 
+def sort_output_rows(rows: list[dict], modifier_col: str = "Modifiers") -> list[dict]:
+    """
+    Sort output rows using the same priority order as Normal-Sales.
+
+    *modifier_col* should be ``"Modifiers"`` for Normal-Sales rows and
+    ``"Modifier"`` for Discounted, Complimentary, and Wastage rows.
+    """
+    def _key(row: dict) -> tuple:
+        parts: list = []
+        for col_name, sort_type in SORT_COLUMNS:
+            # "Modifiers" in SORT_COLUMNS maps to whichever column the caller names
+            actual_col = modifier_col if col_name == "Modifiers" else col_name
+            val = row.get(actual_col, "")
+            if sort_type == "numeric":
+                parts.append(clean_numeric_value(val))
+            elif sort_type == "custom":
+                # Use col_name (always "Modifiers") as the mapping key
+                order = _CUSTOM_SORT_MAPPING.get(col_name, [])
+                parts.append(_get_custom_sort_key(str(val), order))
+            else:
+                parts.append(str(val).lower() if val else _SORT_EMPTY_VALUE)
+        return tuple(parts)
+
+    return sorted(rows, key=_key)
+
+
 def _merge_duplicate_entries(rows: list[dict]) -> tuple[list[dict], int]:
     """Aggregate numeric fields for rows that share the same key quad."""
 
@@ -400,8 +426,8 @@ def normalize_redeemables(
                 skipped_voucher += 1
                 continue
 
-            # Skip Prepaid Cards (not relevant to sales splitting)
-            if rtype.lower() == "Prepaid Tab":
+            # Skip Prepaid Tabs for now
+            if rtype.lower() == "prepaid tab":
                 skipped_prepaid += 1
                 continue
 
@@ -436,7 +462,7 @@ def normalize_redeemables(
 
     msg = (
         f"Redeemables normalised: {len(rows)} rows kept, "
-        f"{skipped_voucher} Voucher Codes skipped."
+        f"{skipped_voucher} Voucher Codes and {skipped_prepaid} Prepaid Tabs skipped."
     )
     if logger:
         logger.info(msg)

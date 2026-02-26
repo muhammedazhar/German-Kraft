@@ -48,7 +48,7 @@ from pathlib import Path
 from typing import Optional
 
 from .logger import PipelineLogger
-from .normalizer import clean_numeric_value, format_numeric_value
+from .normalizer import clean_numeric_value, format_numeric_value, sort_output_rows
 
 # ---------------------------------------------------------------------------
 # Gold Card configuration
@@ -359,4 +359,9 @@ def reconcile(
             f"Wastage={len(wastage)} rows."
         )
 
-    return normal_sales, discounted_sales, complimentary_sales, wastage
+    return (
+        normal_sales,
+        sort_output_rows(discounted_sales, modifier_col="Modifier"),
+        sort_output_rows(complimentary_sales, modifier_col="Modifier"),
+        sort_output_rows(wastage, modifier_col="Modifier"),
+    )

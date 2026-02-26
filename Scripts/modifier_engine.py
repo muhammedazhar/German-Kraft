@@ -67,8 +67,15 @@ def _normalise_modifier_name(raw: str) -> str:
 
 
 def _normalise_category(raw: str) -> str:
-    """Map a raw menu category name through CATEGORY_MAPPING."""
-    return CATEGORY_MAPPING.get(raw.strip(), raw.strip())
+    """Map a raw menu category name through CATEGORY_MAPPING (case-insensitive)."""
+    stripped = raw.strip()
+    if stripped in CATEGORY_MAPPING:
+        return CATEGORY_MAPPING[stripped]
+    lower = stripped.lower()
+    for key, val in CATEGORY_MAPPING.items():
+        if key.lower() == lower:
+            return val
+    return stripped
 
 
 # ---------------------------------------------------------------------------

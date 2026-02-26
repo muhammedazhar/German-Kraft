@@ -10,5 +10,8 @@
 *.log
 
 # Ignore Python bytecode
-__pycache__/
+*__pycache__/
 *.pyc
+
+# Ignore keys
+fingerprints.json

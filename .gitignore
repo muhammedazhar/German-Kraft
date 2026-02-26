@@ -6,6 +6,10 @@
 # Ignore datafiles
 *.csv
 
+# But not the ones in these directories:
+!Discounts/*.csv
+!Menus/*.csv
+
 # Ignore log files
 *.log
 

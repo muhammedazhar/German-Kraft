@@ -1,0 +1,6 @@
+{
+    "python.defaultInterpreterPath": "/Users/muhammedazhar/.miniconda3/envs/German-Kraft/bin/python",
+    "terminal.integrated.env.osx": {
+        "MY_VSCODE_CONDA_ENV": "German-Kraft"
+    }
+}

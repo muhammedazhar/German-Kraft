@@ -36,8 +36,8 @@ CATEGORY_MAPPING: dict[str, str] = {
     "Guest Beer / Cider": "Guest Draughts",
     "Signature Cocktails": "Signature Cocktails",
     "Classic Cocktails": "Classic Cocktails",
-    "Cocktails (GB/GH)": "Cocktails",
-    "Cocktails (DI/CE)": "Cocktails",
+    "Cocktails (GB/GH)": "Classic Cocktails",
+    "Cocktails (DI/CE)": "Classic Cocktails",
     "Non-alcoholic Cocktails": "Non-alcoholic Cocktails",
     "Spritz": "Spritz",
     "Bottled Beer / Lager": "Bottled Beers",
@@ -72,6 +72,17 @@ MODIFIER_SORT_ORDER: list[str] = [
 PRODUCT_SORT_ORDER: list[str] = [
     "Heinr Zwickel", "Heidi Helles", "Siggi",
     "Lotte Weissb", "Fritz", "Schwarzbier",
+    "Cola Pint", "Cola Half Pint", "Diet Cola Pint", "Diet Cola Half Pint",
+    "Lemonade Pint", "Lemonade Half Pint", "Indian Tonic Pint", "Indian Tonic Half Pint",
+    "Light Tonic Pint", "Light Tonic Half Pint", "Ginger Beer Pint", "Ginger Beer Half Pint",
+    "Soda Water Pint", "Soda Water Half Pint", "Apple Juice Pint", "Cranberry Juice Pint", "Orange Juice Pint",
+    "Pineapple Juice Pint", "Pink Grapefruit Pint",
+    "Apple Juice Half Pint", "Cranberry Juice Half Pint", "Orange Juice Half Pint", "Pineapple Juice Half Pint", "Pink Grapefruit Half Pint",
+    "Classic Hm Lemonade", "Ginger & Mint Hm Lemonade", "Hibiscus Hm Lemonade", "Passionfruit Hm Lemonade",
+    "Raspberry Hm Lemonade", "Strawberry Hm Lemonade",
+    "Mercato Gin", "Roobee", "London Dry", "Kraft Gin",
+    "Kraft 37.5", "J&t Dark Rum",
+    "Amaretto", "Antica Sambuca", "Benchmark", "Cazcabel Reposado", "Cut Spiced" "Gnarly Agave Tequila",
 ]
 
 MIXER_SORT_ORDER: list[str] = [

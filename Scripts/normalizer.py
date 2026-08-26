@@ -176,6 +176,16 @@ def format_numeric_value(value: float, as_integer: bool = False) -> str:
     return f"{value:,.2f}"
 
 
+def count_unique_products(rows: list[dict]) -> int:
+    """Return the number of distinct non-empty product names in rows."""
+    products: set[str] = set()
+    for row in rows:
+        product = str(row.get("Product", "")).strip()
+        if product:
+            products.add(product)
+    return len(products)
+
+
 def _normalize(value: str, table: dict[str, str]) -> str:
     if not value:
         return value
@@ -375,10 +385,12 @@ def normalize_sales(
 
     merged, dupes = _merge_duplicate_entries(raw_rows)
     sorted_rows = sorted(merged, key=_sort_key)
+    unique_products = count_unique_products(raw_rows)
 
     msg = (
         f"Master Sales normalised: {len(raw_rows)} raw rows → "
-        f"{len(sorted_rows)} rows after merging {dupes} duplicates."
+        f"{len(sorted_rows)} rows after merging {dupes} duplicates. "
+        f"Unique products sold: {unique_products}."
     )
     if logger:
         logger.info(msg)
@@ -426,11 +438,17 @@ def normalize_redeemables(
     skipped_voucher = 0
     skipped_prepaid = 0
     skipped_other = 0
+    skipped_none = 0
 
     with open(path, encoding="utf-8") as fh:
         reader = csv.DictReader(fh)
         for row in reader:
             rtype = row.get("Redeemable Type", "").strip()
+
+            # Skip 'None' records
+            if rtype.lower() == "none" or row.get("Code", "").strip().lower() == "none":
+                skipped_none += 1
+                continue
 
             # Skip Voucher Codes per spec
             if rtype.lower() == "voucher code":
@@ -473,7 +491,7 @@ def normalize_redeemables(
 
     msg = (
         f"Redeemables normalised: {len(rows)} rows kept, "
-        f"{skipped_voucher} Voucher Codes and {skipped_prepaid} Prepaid Tabs skipped."
+        f"{skipped_voucher} Voucher Codes, {skipped_prepaid} Prepaid Tabs, and {skipped_none} 'None' records skipped."
     )
     if logger:
         logger.info(msg)

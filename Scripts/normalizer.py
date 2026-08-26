@@ -82,7 +82,7 @@ PRODUCT_SORT_ORDER: list[str] = [
     "Raspberry Hm Lemonade", "Strawberry Hm Lemonade",
     "Mercato Gin", "Roobee", "London Dry", "Kraft Gin",
     "Kraft 37.5", "J&t Dark Rum",
-    "Amaretto", "Antica Sambuca", "Benchmark", "Cazcabel Reposado", "Cut Spiced" "Gnarly Agave Tequila",
+    "Amaretto", "Antica Sambuca", "Benchmark", "Cazcabel Reposado", "Cut Spiced", "Gnarly Agave Tequila",
 ]
 
 MIXER_SORT_ORDER: list[str] = [
@@ -260,11 +260,12 @@ def _extract_mixer(modifier: str, category: str) -> tuple[str, str]:
 def _get_custom_sort_key(value: str, order: list[str]) -> tuple[int, str]:
     if not value or not str(value).strip():
         return (_SORT_EMPTY_PRIORITY, _SORT_EMPTY_VALUE)
-    v = str(value).strip()
+    v = str(value).strip().lower()
     for priority, pattern in enumerate(order):
-        if v == pattern or v.startswith(pattern):
-            return (priority, v.lower())
-    return (len(order), v.lower())
+        pattern_lower = pattern.lower()
+        if v == pattern_lower or v.startswith(pattern_lower):
+            return (priority, v)
+    return (len(order), v)
 
 
 def _sort_key(row: dict) -> tuple:

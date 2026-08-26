@@ -225,10 +225,36 @@ def _extract_mixer(modifier: str, category: str) -> tuple[str, str]:
         return modifier, ""
     if not modifier or not modifier.strip():
         return modifier, ""
-    parts = modifier.split(",")
+
+    parts = [p.strip() for p in modifier.split(",")]
     if len(parts) == 1:
-        return modifier, ""
-    return parts[0].strip(), ",".join(parts[1:]).strip()
+        kw_match = any(kw in parts[0].lower() for kw in ("single", "double"))
+        return (parts[0], "") if kw_match else ("", parts[0])
+
+    mod_part = ""
+    mix_part = ""
+    size_keywords = ("single", "double")
+
+    if len(parts) == 2:
+        if any(kw in parts[0].lower() for kw in size_keywords):
+            mod_part, mix_part = parts[0], parts[1]
+        elif any(kw in parts[1].lower() for kw in size_keywords):
+            mod_part, mix_part = parts[1], parts[0]
+        else:
+            mod_part, mix_part = parts[0], parts[1]
+    else:
+        for part in parts:
+            if any(kw in part.lower() for kw in size_keywords):
+                mod_part = part
+                break
+
+        if mod_part:
+            parts.remove(mod_part)
+            mix_part = ", ".join(parts)
+        else:
+            mod_part, mix_part = parts[0], ", ".join(parts[1:])
+
+    return mod_part.strip(), mix_part.strip()
 
 
 def _get_custom_sort_key(value: str, order: list[str]) -> tuple[int, str]:

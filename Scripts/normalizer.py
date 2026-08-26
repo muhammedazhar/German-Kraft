@@ -464,6 +464,7 @@ def normalize_redeemables(
     rows: list[dict] = []
     skipped_voucher = 0
     skipped_prepaid = 0
+    skipped_tab = 0
     skipped_other = 0
     skipped_none = 0
 
@@ -477,8 +478,13 @@ def normalize_redeemables(
                 skipped_none += 1
                 continue
 
+            # Skip Tab records
+            if rtype.lower() == "tab":
+                skipped_tab += 1
+                continue
+
             # Skip Voucher Codes per spec
-            if rtype.lower() == "voucher code":
+            if rtype.lower() == "voucher code" or rtype.lower() == "voucher":
                 skipped_voucher += 1
                 continue
 
@@ -518,7 +524,8 @@ def normalize_redeemables(
 
     msg = (
         f"Redeemables normalised: {len(rows)} rows kept, "
-        f"{skipped_voucher} Voucher Codes, {skipped_prepaid} Prepaid Tabs, and {skipped_none} 'None' records skipped."
+        f"{skipped_voucher} Voucher Codes, {skipped_prepaid} Prepaid Tabs, "
+        f"{skipped_tab} Tabs, and {skipped_none} 'None' records skipped."
     )
     if logger:
         logger.info(msg)

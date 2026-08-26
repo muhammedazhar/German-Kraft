@@ -108,10 +108,12 @@ def _write_csv(path: Path, rows: list[dict], fieldnames: list[str]) -> None:
 # Pipeline
 # ---------------------------------------------------------------------------
 
-def run_pipeline() -> None:
+def run_pipeline(test_mode: bool = False) -> None:
     print()
     print("=" * 65)
     print("  German Kraft – Dines → Polaris Sales Splitter")
+    if test_mode:
+        print("  [TEST MODE ACTIVATED]")
     print("=" * 65)
 
     log = PipelineLogger(BASE_DIR / "Docs" / "Logs" / "pipeline.log")
@@ -129,12 +131,16 @@ def run_pipeline() -> None:
         # Step A2 – Dataset fingerprint check                              #
         # ---------------------------------------------------------------- #
         print("\n[A2] Verifying dataset fingerprints…")
-        fingerprints = file_manager.check_dataset_fingerprints(
-            datasets_dir=DATASETS_DIR,
-            log_path=FINGERPRINT_LOG_PATH,
-            logger=log,
-        )
-        print("  ✓ No duplicate run detected.")
+        if test_mode:
+            print("  ✓ Skipping fingerprint check (TEST MODE).")
+            fingerprints = {}
+        else:
+            fingerprints = file_manager.check_dataset_fingerprints(
+                datasets_dir=DATASETS_DIR,
+                log_path=FINGERPRINT_LOG_PATH,
+                logger=log,
+            )
+            print("  ✓ No duplicate run detected.")
 
         # ---------------------------------------------------------------- #
         # Step B – Normalise input data                                    #
@@ -193,12 +199,17 @@ def run_pipeline() -> None:
         # Step G – Cleanup                                                  #
         # ---------------------------------------------------------------- #
         print("\n[G]  Cleaning up…")
-        file_manager.cleanup_datasets(datasets_dir=DATASETS_DIR, logger=log)
-        file_manager.save_dataset_fingerprints(
-            fingerprints=fingerprints,
-            log_path=FINGERPRINT_LOG_PATH,
-            logger=log,
-        )
+        if test_mode:
+            print("  ✓ Skipping dataset cleanup and fingerprint saving (TEST MODE).")
+            if logger := log:
+                logger.info("Skipped cleanup and fingerprint saving due to test mode.")
+        else:
+            file_manager.cleanup_datasets(datasets_dir=DATASETS_DIR, logger=log)
+            file_manager.save_dataset_fingerprints(
+                fingerprints=fingerprints,
+                log_path=FINGERPRINT_LOG_PATH,
+                logger=log,
+            )
 
     except (FileNotFoundError, ValueError) as exc:
         log.error(str(exc))
@@ -230,4 +241,5 @@ def run_pipeline() -> None:
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    run_pipeline()
+    is_test = "test" in sys.argv or "--test" in sys.argv
+    run_pipeline(test_mode=is_test)
